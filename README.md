@@ -99,66 +99,45 @@ flowchart LR
 ## 3) L2 — Backend Component Diagram
 
 ```mermaid
-%%{init: {'flowchart': {'curve': 'linear', 'rankSpacing': 60, 'nodeSpacing': 50}}}%%
 flowchart TB
-    subgraph Input[" 🔵 INPUT LAYER "]
-      direction LR
-      PRES["PresenceDetector"]
-      DETECT["YOLO Detector"]
-      SERIAL["Serial IO<br/>(STM)"]
+    subgraph InputLayer[" INPUT LAYER "]
+      PRES[PresenceDetector]
+      DETECT[YOLO Detector]
+      SERIAL[Serial IO STM]
     end
 
-    subgraph API[" 🟢 API LAYER "]
-      direction LR
-      FLASK["Flask Routes"]
+    subgraph APILayer[" API LAYER "]
+      FLASK[Flask Routes]
     end
 
-    subgraph Process[" 🟡 PROCESSING LAYER "]
-      direction TB
-      VAL["Validation<br/>+ Cooldown"]
-      
-      subgraph SafetyCheck[" Safety Check "]
-        direction LR
-        HAND["Hand Detection"]
-        SERVO["Servo Control"]
-      end
-      
-      subgraph ChamberLogic[" Chamber Logic "]
-        direction TB
-        FULL["Full Decision"]
-        STUCK["Stuck Recovery"]
-        FS["Fail-safe"]
-      end
-      
-      EVBUS["Event Bus Trigger"]
+    subgraph ProcessLayer[" PROCESSING LAYER "]
+      VAL[Validation + Cooldown]
+      HAND[Hand Detection]
+      SERVO[Servo Control]
+      FULL[Chamber Full Logic]
+      STUCK[Stuck Recovery]
+      FS[Fail-safe]
+      EVBUS[Event Bus]
     end
 
-    subgraph Store[" 🔴 PERSISTENCE LAYER "]
-      direction TB
-      RTS["RealtimeStorage"]
-      QUEUE["Save Queue"]
-      WRITERS["Writer Threads"]
-      
-      subgraph Output[" Output "]
-        direction LR
-        FILES["JSON + Frames"]
-        S3["S3 Upload"]
-      end
+    subgraph StoreLayer[" PERSISTENCE LAYER "]
+      RTS[RealtimeStorage State]
+      QUEUE[Save Queue]
+      WRITERS[Writer Threads]
+      FILES[JSON + Frames]
+      S3[S3 Upload]
     end
 
-    %% Input → Processing
     PRES --> VAL
     DETECT --> VAL
     SERIAL --> VAL
 
-    %% API → Processing
     FLASK --> VAL
     FLASK --> HAND
 
-    %% Processing internal flow
     VAL --> HAND
-    HAND --> SERVO
     VAL --> FULL
+    HAND --> SERVO
     FULL --> STUCK
     STUCK --> FS
     
@@ -166,12 +145,10 @@ flowchart TB
     STUCK --> EVBUS
     FULL --> EVBUS
 
-    %% Processing → Storage
     SERIAL --> RTS
     VAL --> RTS
     EVBUS --> RTS
 
-    %% Storage flow
     RTS --> QUEUE
     QUEUE --> WRITERS
     WRITERS --> FILES
@@ -326,10 +303,10 @@ flowchart TD
     D -- No --> E[return failed]
     D -- Yes --> F{target chamber full?}
     F -- Yes --> G[block + popup full]
-    F -- No --> H[map chamber->code]
-    H --> I[_send_data(force=true)]
+    F -- No --> H[map chamber to code]
+    H --> I[send data force mode]
     I --> J[update cooldown + tracking]
-    J --> K[save force frame + force dump event]
+    J --> K[save force frame + event]
     K --> L[return success]
 ```
 
